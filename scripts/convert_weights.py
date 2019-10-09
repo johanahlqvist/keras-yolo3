@@ -41,7 +41,7 @@ from keras.regularizers import l2
 from keras.utils.vis_utils import plot_model as plot
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
-from yolo3.utils import update_path
+from keras_yolo3.utils import update_path
 
 
 def parse_arguments():

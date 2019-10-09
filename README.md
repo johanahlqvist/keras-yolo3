@@ -1,4 +1,4 @@
-# keras-yolo3
+# Keras: YOLO v3
 
 [![Build Status](https://travis-ci.org/Borda/keras-yolo3.svg?branch=master)](https://travis-ci.org/Borda/keras-yolo3)
 [![Build status](https://ci.appveyor.com/api/projects/status/24m00vife2wae7k0/branch/master?svg=true)](https://ci.appveyor.com/project/Borda/keras-yolo3/branch/master)

@@ -20,8 +20,8 @@ from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
-from yolo3.model import create_model_bottleneck
-from yolo3.utils import get_anchors, get_nb_classes, data_generator, generator_bottleneck, get_dataset_class_names
+from keras_yolo3.model import create_model_bottleneck
+from keras_yolo3.utils import get_anchors, get_nb_classes, data_generator, generator_bottleneck, get_dataset_class_names
 from scripts.training import parse_params, load_config, load_training_lines, _export_classes, _export_model
 
 

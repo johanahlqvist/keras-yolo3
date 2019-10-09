@@ -15,8 +15,8 @@ import sys
 import logging
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
-from yolo3.yolo import YOLO
-from yolo3.utils import update_path
+from keras_yolo3.yolo import YOLO
+from keras_yolo3.utils import update_path
 from scripts.detection import predict_image, predict_video, arg_params_yolo
 
 

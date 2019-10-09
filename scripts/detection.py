@@ -25,8 +25,8 @@ import pandas as pd
 import numpy as np
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
-from yolo3.yolo import YOLO
-from yolo3.utils import update_path
+from keras_yolo3.yolo import YOLO
+from keras_yolo3.utils import update_path
 
 VISUAL_EXT = '_detect'
 VIDEO_FORMAT = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')

@@ -14,9 +14,9 @@ from keras.models import load_model
 from keras.layers import Input
 from keras.utils import multi_gpu_model
 
-from yolo3.model import yolo_eval, yolo_body_full, yolo_body_tiny
-from yolo3.utils import letterbox_image, update_path, get_anchors, get_class_names
-from yolo3.visual import draw_bounding_box
+from .model import yolo_eval, yolo_body_full, yolo_body_tiny
+from .utils import letterbox_image, update_path, get_anchors, get_class_names
+from .visual import draw_bounding_box
 
 PREDICT_FIELDS = ('class', 'label', 'score', 'xmin', 'ymin', 'xmax', 'ymax')
 
@@ -33,7 +33,7 @@ class YOLO(object):
     >>> path_model = os.path.join(update_path('model_data'), 'yolo_empty.h5')
     >>> yolo_empty.save(path_model)
     >>> # use the empty one, so no reasonable detections are expected
-    >>> from yolo3.utils import image_open
+    >>> from keras_yolo3.utils import image_open
     >>> yolo = YOLO(weights_path=path_model,
     ...             anchors_path=YOLO.get_defaults('anchors_path'),
     ...             classes_path=YOLO.get_defaults('classes_path'),

@@ -24,7 +24,7 @@ jobs:
           name: Testing
           command: |
             export DISPLAY=""
-            coverage run --source yolo3 -m py.test yolo3 scripts -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
+            coverage run --source keras_yolo3 -m py.test keras_yolo3 scripts -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
             coverage report && coverage xml -o test-reports/coverage.xml
             codecov
 

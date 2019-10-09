@@ -27,9 +27,9 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as fp:
 install_reqs = _parse_requirements(path.join(HERE, 'requirements.txt'))
 
 setup(
-    name='yolo3',  # Required
+    name='keras_yolo3',  # Required
     version='0.1',  # Required
-    packages=['yolo3'],  # Required
+    packages=['keras_yolo3'],  # Required
     description='YOLO v3 in Keras',  # Required
     author='qqwweee',  # Optional
     author_email='qqwweee',  # Optional

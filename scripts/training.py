@@ -24,8 +24,8 @@ from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
-from yolo3.model import create_model, create_model_tiny
-from yolo3.utils import update_path, get_anchors, get_dataset_class_names, get_nb_classes, data_generator
+from keras_yolo3.model import create_model, create_model_tiny
+from keras_yolo3.utils import update_path, get_anchors, get_dataset_class_names, get_nb_classes, data_generator
 from scripts.detection import arg_params_yolo
 
 DEFAULT_CONFIG = {

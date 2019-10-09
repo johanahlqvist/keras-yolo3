@@ -16,7 +16,7 @@ from keras.models import Model
 from keras.regularizers import l2
 from keras.utils import multi_gpu_model
 
-from yolo3.utils import compose, update_path
+from .utils import compose, update_path
 
 
 @wraps(Conv2D)

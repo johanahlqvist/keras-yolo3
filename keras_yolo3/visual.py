@@ -22,7 +22,7 @@ def draw_bounding_box(image, predicted_class, box, score, color, thickness):
     :return:
 
     >>> import os
-    >>> from yolo3.utils import update_path, image_open
+    >>> from keras_yolo3.utils import update_path, image_open
     >>> img = image_open(os.path.join(update_path('model_data'), 'bike-car-dog.jpg'))
     >>> draw = draw_bounding_box(img, 1, [150, 200, 250, 300], 0.9, color=(255, 0, 0), thickness=3)
     >>> draw  # doctest: +ELLIPSIS
