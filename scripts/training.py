@@ -202,7 +202,7 @@ def _main(path_dataset, path_anchors, path_weights=None, path_output='.',
                         initial_epoch=config['epochs']['head'],
                         callbacks=[tb_logging, checkpoint, reduce_lr, early_stopping])
     logging.info('Training took %f minutes', (time.time() - t_start) / 60.)
-    _export_model(model, path_output, name_prefix, '_final')
+    _export_model(model, path_output, name_prefix, '_full')
 
 
 if __name__ == '__main__':

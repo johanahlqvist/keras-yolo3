@@ -152,7 +152,7 @@ def _main(path_dataset, path_anchors, path_weights=None, path_output='.',
             initial_epoch=epochs_btnc + epochs_head,
             callbacks=[log_tb, checkpoint, reduce_lr, early_stopping])
         logging.info('Training took %f minutes', (time.time() - t_start) / 60.)
-        _export_model(model, path_output, '', '_final')
+        _export_model(model, path_output, '', '_full')
 
     # Further training if needed.
 

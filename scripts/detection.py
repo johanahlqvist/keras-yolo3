@@ -9,6 +9,16 @@ Detections script::
         --path_image ./model_data/bike-car-dog.jpg \
         --path_video person.mp4
 
+You can run detection on whole folder with images/videos::
+
+    python detection.py \
+        --path_weights ./model_data/yolo3-tiny.h5 \
+        --path_anchors ./model_data/tiny-yolo_anchors.csv \
+        --path_classes ./model_data/coco_classes.txt \
+        --path_output ./results \
+        --path_image ./model_data/*.jpg \
+        --path_video /samples/*.mp4
+
 """
 
 import os
@@ -17,6 +27,7 @@ import argparse
 import logging
 import json
 import time
+import glob
 
 import cv2
 import tqdm
@@ -153,6 +164,16 @@ def predict_video(yolo, path_video, path_output=None, show_stream=False):
         logging.info('exported predictions: %s', path_json)
 
 
+def expand_file_paths(paths):
+    paths_unrolled = []
+    for ph in paths:
+        if '*' in ph:
+            paths_unrolled += glob.glob(ph)
+        elif os.path.isfile(ph):
+            paths_unrolled.append(ph)
+    return paths_unrolled
+
+
 def _main(path_weights, path_anchors, model_image_size, path_classes, path_output,
           nb_gpu=0, **kwargs):
 
@@ -162,11 +183,13 @@ def _main(path_weights, path_anchors, model_image_size, path_classes, path_outpu
 
     logging.info('Start image/video processing..')
     if 'path_image' in kwargs:
-        for path_img in tqdm.tqdm(kwargs['path_image'], desc='images'):
+        paths_img = expand_file_paths(kwargs['path_image'])
+        for path_img in tqdm.tqdm(paths_img, desc='images'):
             logging.debug('processing: "%s"', path_img)
             predict_image(yolo, path_img, path_output)
     if 'path_video' in kwargs:
-        for path_vid in tqdm.tqdm(kwargs['path_video'], desc='videos'):
+        paths_vid = expand_file_paths(kwargs['path_image'])
+        for path_vid in tqdm.tqdm(paths_vid, desc='videos'):
             logging.debug('processing: "%s"', path_vid)
             predict_video(yolo, path_vid, path_output)
 

@@ -60,7 +60,7 @@ jobs:
             cat ./model_data/train_tiny-yolo_test.yaml
             python ./scripts/training.py --path_dataset ./model_data/VOC_2007_val.txt --path_weights ./model_data/tiny-yolo.h5 --path_anchors ./model_data/tiny-yolo_anchors.csv --path_classes ./model_data/voc_classes.txt --path_output ./model_data --path_config ./model_data/train_tiny-yolo_test.yaml
             # use the train model
-            python ./scripts/detection.py -w ./model_data/tiny-yolo_weights_final.h5 -a ./model_data/tiny-yolo_anchors.csv --model_image_size 416 416 -c ./model_data/voc_classes.txt -o ./results -i ./model_data/bike-car-dog.jpg
+            python ./scripts/detection.py -w ./model_data/tiny-yolo_weights_full.h5 -a ./model_data/tiny-yolo_anchors.csv --model_image_size 416 416 -c ./model_data/voc_classes.txt -o ./results -i ./model_data/bike-car-dog.jpg
             ls -l results/*
 
       - store_test_results:
