@@ -460,35 +460,37 @@ def get_augmented_data(annotation_line, input_shape, augment=True, max_boxes=20,
     boxes = np.array([list(map(float, box.split(',')))
                       for box in line_split[1:]]).astype(int)
 
-    if not augment:
-        # resize image
-        img_data, adj_box_data = normalize_image_bboxes(
-            image, boxes, input_shape, resize_img=resize_img,
-            allow_rnd_shift=allow_rnd_shift, interp=interp)
-        box_data = _copy_bboxes(boxes, adj_box_data, max_boxes, check_dropped=False)
-        # yolo3.visual.show_augment_data(image_open(line_split[0]), boxes, img_data, box_data)
-        return img_data, box_data
+    # if not augment:
+    #     img_data, adj_box_data = normalize_image_bboxes(
+    #         image, boxes, input_shape, resize_img=resize_img,
+    #         allow_rnd_shift=allow_rnd_shift, interp=interp)
+    #     box_data = _copy_bboxes(boxes, adj_box_data, max_boxes, check_dropped=False)
+    #     return img_data, box_data
 
     # resize image
     # new_ar = cnn_w / cnn_h * _rand(1 - jitter, 1 + jitter) / _rand(1 - jitter, 1 + jitter)
-    scaling = _rand(1. / img_scaling, img_scaling)
     if resize_img:
+        scaling = _rand(1. / img_scaling, img_scaling) if augment else 1.
         img_data, scaling, (dx, dy) = _scale_image_to_cnn(
             image, input_shape, scaling, allow_rnd_shift=allow_rnd_shift, interp=interp)
     else:
         img_data, scaling, (dx, dy) = _crop_image_to_cnn(image, input_shape, allow_rnd_shift)
     image = Image.fromarray(np.round(img_data * 255).astype(np.uint8))
 
-    # flip image or not
-    flip_horizontal = np.random.random() < 0.5 and flip_horizontal
-    if flip_horizontal:
-        image = image.transpose(Image.FLIP_LEFT_RIGHT)
-    flip_vertical = np.random.random() < 0.5 and flip_vertical
-    if flip_vertical:
-        image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    if augment:
+        # flip image or not
+        flip_horizontal = np.random.random() < 0.5 and flip_horizontal
+        if flip_horizontal:
+            image = image.transpose(Image.FLIP_LEFT_RIGHT)
+        flip_vertical = np.random.random() < 0.5 and flip_vertical
+        if flip_vertical:
+            image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
-    # distort image
-    img_data = augment_image_color(image, hue, sat, val)
+        # distort image
+        img_data = augment_image_color(image, hue, sat, val)
+    else:
+        flip_horizontal = False
+        flip_vertical = False
 
     if len(boxes) == 0:
         max_boxes = max_boxes if max_boxes else 1
@@ -499,7 +501,7 @@ def get_augmented_data(annotation_line, input_shape, augment=True, max_boxes=20,
     adj_box_data = adjust_bboxes(boxes, input_shape, flip_horizontal, flip_vertical,
                                  scaling, scaling, dx, dy)
     box_data = _copy_bboxes(boxes, adj_box_data, max_boxes)
-    # yolo3.visual.show_augment_data(image_open(line_split[0]), boxes, img_data, box_data)
+    # yolo3.visual.show_augment_data(image_open(line_split[0]), boxes, img_data, box_data, title=line_split[0])
     return img_data, box_data
 
 

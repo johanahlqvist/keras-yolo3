@@ -7,7 +7,7 @@ import logging
 from functools import wraps
 
 import tensorflow as tf
-from keras import backend as K
+import keras.backend as K
 from keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D
 from keras.layers import Input, Lambda
 from keras.layers.advanced_activations import LeakyReLU

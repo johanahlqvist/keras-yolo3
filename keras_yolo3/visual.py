@@ -67,7 +67,7 @@ def _draw_bbox(ax, bbox, color='r'):
     ax.plot(x, y, color=color)
 
 
-def show_augment_data(image_in, bboxes, img_data, box_data):
+def show_augment_data(image_in, bboxes, img_data, box_data, title=''):
     """visualise image_data and box_data
 
     :param ndaaray image_in: original image
@@ -81,13 +81,15 @@ def show_augment_data(image_in, bboxes, img_data, box_data):
     >>> show_augment_data(img, [box], img, [box, [0] * 5])  # doctest: +ELLIPSIS
     <...>
     """
-    fig, axarr = plt.subplots(ncols=2, figsize=(12, 5))
+    fig, axarr = plt.subplots(ncols=2, figsize=(14, 8), constrained_layout=True)
     axarr[0].set_title('Original image with annotation')
     axarr[0].imshow(np.array(image_in))
     for box in bboxes:
         _draw_bbox(axarr[0], box)
-    axarr[1].set_title('Augmented image with adjusted bboxes')
-    axarr[1].imshow(np.array(img_data))
+    axarr[1].set_title('Augmented image with adjusted bounding boxes')
+    axarr[1].imshow(np.array(img_data), vmin=0, vmax=1)
     for box in box_data:
         _draw_bbox(axarr[1], box)
+    fig.suptitle(title)
+    fig.tight_layout()
     return fig
