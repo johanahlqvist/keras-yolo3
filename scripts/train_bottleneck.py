@@ -52,6 +52,8 @@ def _main(path_dataset, path_anchors, path_weights=None, path_output='.',
     model, bottleneck_model, last_layer_model = create_model_bottleneck(
         config['image-size'], anchors, nb_classes, freeze_body=2,
         weights_path=path_weights, nb_gpu=nb_gpu)
+    # if create blank use image-size, else take loaded from model file
+    config['image-size'] = model._input_layers[0].input_shape[1:3]
 
     log_tb = TensorBoard(log_dir=path_output)
     checkpoint = ModelCheckpoint(os.path.join(path_output, NAME_CHECKPOINT),

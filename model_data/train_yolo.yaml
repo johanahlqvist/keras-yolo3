@@ -1,9 +1,9 @@
 image-size: [608, 608]
 batch-size:
   bottlenecks: 8
-  head: 8
+  head: 4
   # the unfreeze model takes more memory
-  full: 4
+  full: 2
 epochs:
   bottlenecks: 25
   head: 50

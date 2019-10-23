@@ -51,8 +51,6 @@ def arg_params_yolo():
                         help='path to model weight file')
     parser.add_argument('-a', '--path_anchors', type=str,
                         help='path to anchor definitions')
-    parser.add_argument('--model_image_size', type=int, nargs=2, required=False,
-                        help='input image size for the model', default=(None, None))
     parser.add_argument('-c', '--path_classes', type=str,
                         help='path to class definitions')
     parser.add_argument('--nb_gpu', type=int, help='Number of GPU to use',
@@ -100,8 +98,8 @@ def predict_image(yolo, path_image, path_output=None):
         name = os.path.splitext(os.path.basename(path_image))[0]
         path_out_img = os.path.join(path_output, name + VISUAL_EXT + '.jpg')
         path_out_csv = os.path.join(path_output, name + '.csv')
-        logging.info('exporting image: "%s" and detection: "%s"',
-                     path_out_img, path_out_csv)
+        logging.debug('exporting image: "%s" and detection: "%s"',
+                      path_out_img, path_out_csv)
         image_pred.save(path_out_img)
         pd.DataFrame(pred_items).to_csv(path_out_csv)
 
@@ -128,7 +126,7 @@ def predict_video(yolo, path_video, path_output=None, show_stream=False):
         name = os.path.splitext(os.path.basename(path_video))[0] \
             if isinstance(path_video, str) else str(path_video)
         path_out = os.path.join(path_output, name + VISUAL_EXT + '.avi')
-        logging.info('export video: %s', path_out)
+        logging.debug('export video: %s', path_out)
         out_vid = cv2.VideoWriter(path_out, VIDEO_FORMAT, video_fps, video_size)
         frame_preds = []
         path_json = os.path.join(path_output, name + '.json')
@@ -161,7 +159,7 @@ def predict_video(yolo, path_video, path_output=None, show_stream=False):
 
     if out_vid:
         out_vid.release()
-        logging.info('exported predictions: %s', path_json)
+        logging.debug('exported predictions: %s', path_json)
 
 
 def expand_file_paths(paths):
@@ -174,12 +172,10 @@ def expand_file_paths(paths):
     return paths_unrolled
 
 
-def _main(path_weights, path_anchors, model_image_size, path_classes, path_output,
-          nb_gpu=0, **kwargs):
+def _main(path_weights, path_anchors, path_classes, path_output, nb_gpu=0, **kwargs):
 
     yolo = YOLO(weights_path=path_weights, anchors_path=path_anchors,
-                classes_path=path_classes, model_image_size=model_image_size,
-                nb_gpu=nb_gpu)
+                classes_path=path_classes, nb_gpu=nb_gpu)
 
     logging.info('Start image/video processing..')
     if 'path_image' in kwargs:

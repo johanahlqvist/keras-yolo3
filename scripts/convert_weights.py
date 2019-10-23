@@ -263,12 +263,14 @@ def _main(config_path, weights_path, output_path, weights_only, plot_model):
     cfg_parser.read_file(unique_config_file)
 
     logging.info('Creating Keras model.')
-    input_layer = Input(shape=(None, None, 3))
+    cnn_w = int(cfg_parser['net_0']['width'])
+    cnn_h = int(cfg_parser['net_0']['height'])
+    input_layer = Input(shape=(cnn_h, cnn_w, 3))
     prev_layer = input_layer
     all_layers = []
 
-    weight_decay = float(cfg_parser['net_0']['decay']
-                         ) if 'net_0' in cfg_parser.sections() else 5e-4
+    weight_decay = float(cfg_parser['net_0']['decay']) \
+        if 'net_0' in cfg_parser.sections() else 5e-4
     count = 0
     out_index = []
     for section in tqdm.tqdm(cfg_parser.sections()):

@@ -45,13 +45,11 @@ For more model and configuration please see  [YOLO website](http://pjreddie.com/
        --path_weights ./model_data/yolo.h5 \
        --path_anchors ./model_data/yolo_anchors.csv \
        --path_classes ./model_data/coco_classes.txt \
-       --model_image_size 608 608 \
        --path_output ./results \
        --path_image ./model_data/bike-car-dog.jpg \
        --path_video person.mp4
     ```
     For Full YOLOv3, just do in a similar way, just specify model path and anchor path with `--path_weights <model_file>` and `--path_anchors <anchor_file>`.
-    Note `model_image_size` is depending on used model, see width and height in model config `*.cfg`. Expected values are ` 608 608` for full YOLO and and `416 416` for Tiny YOLO.
 4. MultiGPU usage: use `--nb_gpu N` to use N GPUs. It is passed to the Keras [multi_gpu_model()](https://keras.io/utils/#multi_gpu_model).
 
 ---
@@ -93,7 +91,14 @@ If you want to use original pre-trained weights for YOLOv3:
 1. The test environment is Python 3.x ; Keras 2.2.0 ; tensorflow 1.14.0
 2. Default anchors are used. If you use your own anchors, probably some changes are needed.
 3. The inference result is not totally the same as Darknet but the difference is small.
-4. The loaded model takes whole GPU memory.
-5. Always load pretrained weights and freeze layers in the first stage of training. Or try Darknet training. It's OK if there is a mismatch warning.
-6. The training strategy is for reference only. Adjust it according to your dataset and your goal. and add further strategy if needed.
-7. For speeding up the training process with frozen layers train_bottleneck.py can be used. It will compute the bottleneck features of the frozen model first and then only trains the last layers. This makes training on CPU possible in a reasonable time. See this [post](https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html) for more information on bottleneck features.
+4. Always load pretrained weights and freeze layers in the first stage of training. Or try Darknet training. It's OK if there is a mismatch warning.
+5. The training strategy is for reference only. Adjust it according to your dataset and your goal. and add further strategy if needed.
+6. For speeding up the training process with frozen layers train_bottleneck.py can be used. It will compute the bottleneck features of the frozen model first and then only trains the last layers. This makes training on CPU possible in a reasonable time. See this [post](https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html) for more information on bottleneck features.
+7. Failing while run multi-GPU training, think about porting to TF 2.0.
+
+---
+
+## Nice reading
+
+- [Building efficient data pipelines using TensorFlow](https://towardsdatascience.com/building-efficient-data-pipelines-using-tensorflow-8f647f03b4ce)
+- [How to use half precision float16 when training on RTX cards with Tensorflow / Keras](https://medium.com/@noel_kennedy/how-to-use-half-precision-float16-when-training-on-rtx-cards-with-tensorflow-keras-d4033d59f9e4)

@@ -62,12 +62,11 @@ def loop_detect_stream(yolo, path_output=None):
         predict_video(yolo, vid_path, path_output, show_stream=True)
 
 
-def _main(path_weights, path_anchors, model_image_size, path_classes, nb_gpu,
+def _main(path_weights, path_anchors, path_classes, nb_gpu,
           path_output=None, images=False, videos=False, stream=False):
     assert any([images, videos, stream]), 'nothing to do...'
 
-    yolo = YOLO(path_weights, path_anchors, path_classes, model_image_size,
-                nb_gpu=nb_gpu)
+    yolo = YOLO(path_weights, path_anchors, path_classes, nb_gpu=nb_gpu)
 
     if images:
         # Image detection mode, disregard any remaining command line arguments

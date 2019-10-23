@@ -413,8 +413,8 @@ def create_model(input_shape, anchors, num_classes, weights_path=None, model_fac
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     # K.clear_session()  # get a new session
-    image_input = Input(shape=(None, None, 3))
-    h, w = input_shape
+    cnn_h, cnn_w = input_shape
+    image_input = Input(shape=(cnn_h, cnn_w, 3))
     num_anchors = len(anchors)
 
     model_body = _FACTOR_YOLO_BODY[model_factor](image_input, num_anchors // model_factor, num_classes)
@@ -437,8 +437,8 @@ def create_model(input_shape, anchors, num_classes, weights_path=None, model_fac
 
     model_loss_fn = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
                            arguments=_LOSS_ARGUMENTS)
-    y_true = [Input(shape=(h // {i: _INPUT_SHAPES[i] for i in range(model_factor)}[l],
-                           w // {i: _INPUT_SHAPES[i] for i in range(model_factor)}[l],
+    y_true = [Input(shape=(cnn_h // {i: _INPUT_SHAPES[i] for i in range(model_factor)}[l],
+                           cnn_w // {i: _INPUT_SHAPES[i] for i in range(model_factor)}[l],
                            num_anchors // model_factor,
                            num_classes + 5))
               for l in range(model_factor)]
@@ -465,12 +465,12 @@ def create_model_bottleneck(input_shape, anchors, num_classes, freeze_body=2,
                             weights_path=None, nb_gpu=1):
     """create the training model"""
     # K.clear_session()  # get a new session
-    image_input = Input(shape=(None, None, 3))
-    h, w = input_shape
+    cnn_h, cnn_w = input_shape
+    image_input = Input(shape=(cnn_w, cnn_h, 3))
     num_anchors = len(anchors)
 
-    y_true = [Input(shape=(h // {0: 32, 1: 16, 2: 8}[l],
-                           w // {0: 32, 1: 16, 2: 8}[l],
+    y_true = [Input(shape=(cnn_h // {0: 32, 1: 16, 2: 8}[l],
+                           cnn_w // {0: 32, 1: 16, 2: 8}[l],
                            num_anchors // 3,
                            num_classes + 5))
               for l in range(3)]

@@ -136,6 +136,8 @@ def _main(path_dataset, path_anchors, path_weights=None, path_output='.',
     name_prefix = 'tiny-' if is_tiny_version else ''
     model = _create_model(config['image-size'], anchors, nb_classes, freeze_body=2,
                           weights_path=path_weights, nb_gpu=nb_gpu)
+    # if create blank use image-size, else take loaded from model file
+    config['image-size'] = model._input_layers[0].input_shape[1:3]
 
     tb_logging = TensorBoard(log_dir=path_output)
     checkpoint = ModelCheckpoint(os.path.join(path_output, NAME_CHECKPOINT),
@@ -148,8 +150,8 @@ def _main(path_dataset, path_anchors, path_weights=None, path_output='.',
     early_stopping = EarlyStopping(monitor='val_loss', verbose=1,
                                    **config.get('CB_stopping', {}))
 
-    lines_train, lines_valid, num_val, num_train = load_training_lines(path_dataset,
-                                                                       config['valid-split'])
+    lines_train, lines_valid, num_val, num_train = \
+        load_training_lines(path_dataset, config['valid-split'])
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
@@ -172,35 +174,39 @@ def _main(path_dataset, path_anchors, path_weights=None, path_output='.',
         logging.info('Train on %i samples, val on %i samples, with batch size %i.',
                      num_train, num_val, config['batch-size']['head'])
         t_start = time.time()
-        model.fit_generator(_data_generator(lines_train, batch_size=config['batch-size']['head']),
-                            steps_per_epoch=max(1, num_train // config['batch-size']['head']),
-                            validation_data=_data_generator(lines_valid, augment=False),
-                            validation_steps=max(1, num_val // config['batch-size']['head']),
-                            epochs=config['epochs']['head'],
-                            use_multiprocessing=False,
-                            initial_epoch=0,
-                            callbacks=[tb_logging, checkpoint, reduce_lr, early_stopping])
+        model.fit_generator(
+            _data_generator(lines_train, batch_size=config['batch-size']['head']),
+            steps_per_epoch=max(1, num_train // config['batch-size']['head']),
+            validation_data=_data_generator(lines_valid, augment=False),
+            validation_steps=max(1, num_val // config['batch-size']['head']),
+            epochs=config['epochs']['head'],
+            use_multiprocessing=False,
+            initial_epoch=0,
+            callbacks=[tb_logging, checkpoint, reduce_lr, early_stopping],
+        )
         logging.info('Training took %f minutes', (time.time() - t_start) / 60.)
         _export_model(model, path_output, name_prefix, '_head')
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
     logging.info('Unfreeze all of the layers.')
-    for i in range(len(model.layers)):
+    for i, _ in enumerate(model.layers):
         model.layers[i].trainable = True
     model.compile(optimizer=Adam(lr=1e-4),
                   loss={'yolo_loss': _yolo_loss})
     logging.info('Train on %i samples, val on %i samples, with batch size %i.',
                  num_train, num_val, config['batch-size']['full'])
     t_start = time.time()
-    model.fit_generator(_data_generator(lines_train, batch_size=config['batch-size']['full']),
-                        steps_per_epoch=max(1, num_train // config['batch-size']['full']),
-                        validation_data=_data_generator(lines_valid, augment=False),
-                        validation_steps=max(1, num_val // config['batch-size']['full']),
-                        epochs=config['epochs']['head'] + config['epochs']['full'],
-                        use_multiprocessing=False,
-                        initial_epoch=config['epochs']['head'],
-                        callbacks=[tb_logging, checkpoint, reduce_lr, early_stopping])
+    model.fit_generator(
+        _data_generator(lines_train, batch_size=config['batch-size']['full']),
+        steps_per_epoch=max(1, num_train // config['batch-size']['full']),
+        validation_data=_data_generator(lines_valid, augment=False),
+        validation_steps=max(1, num_val // config['batch-size']['full']),
+        epochs=config['epochs']['head'] + config['epochs']['full'],
+        use_multiprocessing=False,
+        initial_epoch=config['epochs']['head'],
+        callbacks=[tb_logging, checkpoint, reduce_lr, early_stopping],
+    )
     logging.info('Training took %f minutes', (time.time() - t_start) / 60.)
     _export_model(model, path_output, name_prefix, '_full')
 

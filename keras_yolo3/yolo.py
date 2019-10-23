@@ -49,7 +49,7 @@ class YOLO(object):
         "classes_path": os.path.join(update_path('model_data'), 'coco_classes.txt'),
         "score": 0.3,
         "iou": 0.45,
-        "model_image_size": (416, 416),
+        # "model_image_size": (416, 416),
         "nb_gpu": 1,
     }
 
@@ -78,35 +78,35 @@ class YOLO(object):
         self.classes_path = update_path(classes_path)
         self.score = score
         self.iou = iou
-        self.model_image_size = model_image_size
+
         self.nb_gpu = nb_gpu
         if not self.nb_gpu:
             # disable all GPUs
             os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
         self.class_names = get_class_names(self.classes_path)
         self.anchors = get_anchors(self.anchors_path)
         self._open_session()
-        self.boxes, self.scores, self.classes = self._create_model()
+        self.boxes, self.scores, self.classes = self._create_model(model_image_size)
+
         self._generate_class_colors()
 
     def _open_session(self):
-        if K.backend() == 'tensorflow':
+        if K.backend().lower() == 'tensorflow':
             import tensorflow as tf
-            from keras.backend.tensorflow_backend import set_session
-
             config = tf.ConfigProto(allow_soft_placement=True,
                                     log_device_placement=False)
             config.gpu_options.force_gpu_compatible = True
-            # config.gpu_options.per_process_gpu_memory_fraction = 0.5
+            # config.gpu_options.per_process_gpu_memory_fraction = 0.3
             # Don't pre-allocate memory; allocate as-needed
             config.gpu_options.allow_growth = True
+            self.sess = tf.Session(config=config)
+            K.tensorflow_backend.set_session(self.sess)
+        else:
+            logging.warning('Using %s backend.', K.backend())
+            self.sess = K.get_session()
 
-            sess = tf.Session(config=config)
-            set_session(sess)
-
-        self.sess = K.get_session()
-
-    def _create_model(self):
+    def _create_model(self, model_image_size=(None, None)):
         # weights_path = update_path(self.weights_path)
         logging.debug('loading model from "%s"', self.weights_path)
         assert self.weights_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
@@ -119,12 +119,12 @@ class YOLO(object):
         except Exception:
             is_tiny_version = (num_anchors == 6)  # default setting
             logging.exception('Loading weights from "%s"', self.weights_path)
+            cnn_h, cnn_w = model_image_size
+            input = Input(shape=(cnn_h, cnn_w, 3))
             if is_tiny_version:
-                self.yolo_model = yolo_body_tiny(Input(shape=(None, None, 3)),
-                                                 num_anchors // 2, num_classes)
+                self.yolo_model = yolo_body_tiny(input, num_anchors // 2, num_classes)
             else:
-                self.yolo_model = yolo_body_full(Input(shape=(None, None, 3)),
-                                                 num_anchors // 3, num_classes)
+                self.yolo_model = yolo_body_full(input, num_anchors // 3, num_classes)
             # make sure model, anchors and classes match
             self.yolo_model.load_weights(self.weights_path, by_name=True, skip_mismatch=True)
         else:
@@ -164,11 +164,13 @@ class YOLO(object):
 
     def detect_image(self, image):
         start = time.time()
+        # this should be taken from the model
+        model_image_size = self.yolo_model._input_layers[0].input_shape[1:3]
 
-        if isinstance(self.model_image_size, (list, tuple, set)) and all(self.model_image_size):
-            assert self.model_image_size[0] % 32 == 0, 'Multiples of 32 required'
-            assert self.model_image_size[1] % 32 == 0, 'Multiples of 32 required'
-            boxed_image = letterbox_image(image, tuple(reversed(self.model_image_size)))
+        if all(model_image_size):
+            for size in model_image_size:
+                assert size % 32 == 0, 'Multiples of 32 required'
+            boxed_image = letterbox_image(image, tuple(reversed(model_image_size)))
         else:
             new_image_size = (image.width - (image.width % 32),
                               image.height - (image.height % 32))
