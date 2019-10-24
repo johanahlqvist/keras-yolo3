@@ -73,7 +73,7 @@ def show_augment_data(image_in, bboxes, img_data, box_data, title=''):
     :param ndaaray image_in: original image
     :param ndaaray bboxes: original annotation
     :param ndaaray img_data: augmented image
-    :param ndaaray box_data: adjusted bboxes
+    :param ndaaray box_data: adjusted boxes
     :return:
 
     >>> img = np.random.random((250, 200, 3))

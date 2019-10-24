@@ -166,7 +166,8 @@ def augment_image_color(image, hue, sat, val):
     return image_data
 
 
-def adjust_bboxes(bbox, input_shape, flip_horizontal, flip_vertical, scale_x, scale_y, dx, dy):
+def adjust_bboxes(bbox, input_shape, flip_horizontal, flip_vertical, scale_x, scale_y, dx, dy,
+                  bbox_overlap=0.9):
     """randomize bounding boxes
 
     :param ndarray boxes:
@@ -181,24 +182,25 @@ def adjust_bboxes(bbox, input_shape, flip_horizontal, flip_vertical, scale_x, sc
     :param int new_h:
     :param int dx: translation in X axis
     :param int dy: translation in Y axis
+    :param float bbox_overlap: threshold drop all boxes with lower overlap
     :return ndarray:
 
     >>> np.random.seed(0)
     >>> bboxes = np.array([[10, 15, 20, 25, 0], [3, 5, 4, 10, 1]])
-    >>> adjust_bboxes(bboxes, (20, 20), True, False, 1., 1., 0, 0)
+    >>> adjust_bboxes(bboxes, (20, 20), True, False, 1., 1., 0, 0, bbox_overlap=0.2)
     array([[ 0, 15, 10, 20,  0],
            [16,  5, 17, 10,  1]])
-    >>> adjust_bboxes(bboxes, (20, 20), False, True, 1., 1., 0, 0)
+    >>> adjust_bboxes(bboxes, (20, 20), False, True, 1., 1., 0, 0, bbox_overlap=0.2)
     array([[10,  0, 20,  5,  0],
            [ 3, 10,  4, 15,  1]])
-    >>> adjust_bboxes(bboxes, (20, 20), False, False, 1.2, 0.8, 0, 0)
+    >>> adjust_bboxes(bboxes, (20, 20), False, False, 1.2, 0.8, 0, 0, bbox_overlap=0.2)
     array([[12, 12, 20, 20,  0],
            [ 3,  4,  4,  8,  1]])
-    >>> adjust_bboxes(bboxes, (20, 20), False, False, 1., 1., -2, 3)
-    array([[ 8, 18, 18, 20,  0],
-           [ 1,  8,  2, 13,  1]])
+    >>> adjust_bboxes(bboxes, (20, 20), False, False, 1., 1., -2, 3, bbox_overlap=0.2)
+    array([[ 1,  8,  2, 13,  1]])
     """
     boxes = bbox.copy()  # make a copy
+    bb_sizes = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1]) * scale_x * scale_y
     cnn_h, cnn_w = input_shape
 
     boxes[:, [0, 2]] = boxes[:, [0, 2]] * scale_x + dx
@@ -208,12 +210,12 @@ def adjust_bboxes(bbox, input_shape, flip_horizontal, flip_vertical, scale_x, sc
     if flip_vertical:
         boxes[:, [1, 3]] = cnn_h - boxes[:, [3, 1]]
 
-    boxes = _filter_empty_bboxes(boxes, cnn_w, cnn_h)
+    boxes = _filter_empty_bboxes(boxes, cnn_w, cnn_h, bb_sizes, bbox_overlap)
     return boxes
 
 
-def normalize_image_bboxes(image, bboxes, input_shape, resize_img,
-                           allow_rnd_shift=True, interp=Image.BICUBIC):
+def normalize_image_bboxes(image, boxes, input_shape, resize_img,
+                           allow_rnd_shift=True, bbox_overlap=0.9, interp=Image.BICUBIC):
     """normalize image bounding bbox
 
     :param Image image:
@@ -223,6 +225,7 @@ def normalize_image_bboxes(image, bboxes, input_shape, resize_img,
     :param bool resize_img: allow resize image to CNN input shape
     :param bool allow_rnd_shift: allow shifting image not only centered crop
     :param int interp: image interpolation
+    :param float bbox_overlap: threshold drop all boxes with lower overlap
     :return:
 
     >>> np.random.seed(0)
@@ -231,7 +234,7 @@ def normalize_image_bboxes(image, bboxes, input_shape, resize_img,
     >>> img = Image.fromarray(img)
     >>> bboxes = np.array([[10, 15, 20, 25, 0], [3, 5, 4, 10, 1]])
     >>> image_data, box_data = normalize_image_bboxes(img, bboxes, (10, 10), resize_img=True,
-    ...                                             interp=Image.NEAREST)
+    ...                                               interp=Image.NEAREST, bbox_overlap=0.1)
     >>> np.round(image_data, 1)[:, :, 0]  # doctest: +NORMALIZE_WHITESPACE
     array([[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
            [0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. ],
@@ -243,7 +246,7 @@ def normalize_image_bboxes(image, bboxes, input_shape, resize_img,
            [0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. ],
            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]])
-    >>> box_data  # doctest: +NORMALIZE_WHITESPACE
+    >>> box_data
     array([[ 5,  8, 10, 10,  0],
            [ 1,  3,  2,  6,  1]])
     >>> image_data, box_data = normalize_image_bboxes(img, bboxes, (25, 25), resize_img=True,
@@ -269,8 +272,7 @@ def normalize_image_bboxes(image, bboxes, input_shape, resize_img,
            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, ..., 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, ..., 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]])
     >>> box_data
-    array([[12, 23, 25, 25,  0],
-           [ 3, 11,  5, 17,  1]])
+    array([[ 3, 11,  5, 17,  1]])
     >>> image_data, box_data = normalize_image_bboxes(img, bboxes, (15, 15), resize_img=False,
     ...                                             interp=Image.NEAREST)
     >>> np.round(image_data, 1)[:, :, 0]  # doctest: +NORMALIZE_WHITESPACE
@@ -298,17 +300,18 @@ def normalize_image_bboxes(image, bboxes, input_shape, resize_img,
     else:
         img_data, scale, (dx, dy) = _crop_image_to_cnn(image, input_shape, allow_rnd_shift)
 
-    if len(bboxes) == 0:
+    if len(boxes) == 0:
         return img_data, np.zeros((1, 5))
 
-    bboxes = bboxes.copy()
-    np.random.shuffle(bboxes)
-    bboxes[:, [0, 2]] = bboxes[:, [0, 2]] * scale + dx
-    bboxes[:, [1, 3]] = bboxes[:, [1, 3]] * scale + dy
+    boxes = boxes.copy()
+    np.random.shuffle(boxes)
+    bb_sizes = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1]) * scale * scale
+    boxes[:, [0, 2]] = boxes[:, [0, 2]] * scale + dx
+    boxes[:, [1, 3]] = boxes[:, [1, 3]] * scale + dy
 
-    bboxes = _filter_empty_bboxes(bboxes, *input_shape)
+    boxes = _filter_empty_bboxes(boxes, *input_shape, bb_sizes=bb_sizes, bb_overlap=bbox_overlap)
 
-    return img_data, bboxes
+    return img_data, boxes
 
 
 def _scale_image_to_cnn(image, input_shape, scaling=1., allow_rnd_shift=True,
@@ -400,21 +403,21 @@ def _copy_bboxes(boxes, adj_box_data, max_boxes, check_dropped=True):
     return box_data
 
 
-def _filter_empty_bboxes(boxes, cnn_w, cnn_h):
+def _filter_empty_bboxes(boxes, cnn_w, cnn_h, bb_sizes, bb_overlap):
     boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0, cnn_w)
     boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0, cnn_h)
 
-    box_w = boxes[:, 2] - boxes[:, 0]
-    box_h = boxes[:, 3] - boxes[:, 1]
+    sizes = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    mask = sizes > (bb_sizes * bb_overlap)
     # discard invalid box
-    boxes = boxes[np.logical_and(box_w > 0, box_h > 0)]
+    boxes = boxes[mask]
     return boxes
 
 
 def get_augmented_data(annotation_line, input_shape, augment=True, max_boxes=20,
                        hue=.1, sat=1.5, val=1.5, jitter=0.3, img_scaling=1.2,
                        flip_horizontal=True, flip_vertical=False, resize_img=True,
-                       allow_rnd_shift=True, interp=Image.BICUBIC):
+                       allow_rnd_shift=True, bbox_overlap=0.95, interp=Image.BICUBIC):
     """augment pre-processing for real-time data augmentation
 
     :param str annotation_line:
@@ -430,6 +433,7 @@ def get_augmented_data(annotation_line, input_shape, augment=True, max_boxes=20,
     :param bool flip_vertical: allow random flop image/boxes horizontal
     :param bool resize_img: resize image to fit fully to CNN
     :param bool allow_rnd_shift: allow shifting image not only centered crop
+    :param float bbox_overlap: threshold in case cut image, drop all boxes with lower overlap
     :param int interp: image interpolation
     :return:
 
@@ -459,13 +463,6 @@ def get_augmented_data(annotation_line, input_shape, augment=True, max_boxes=20,
     image = image_open(line_split[0])
     boxes = np.array([list(map(float, box.split(',')))
                       for box in line_split[1:]]).astype(int)
-
-    # if not augment:
-    #     img_data, adj_box_data = normalize_image_bboxes(
-    #         image, boxes, input_shape, resize_img=resize_img,
-    #         allow_rnd_shift=allow_rnd_shift, interp=interp)
-    #     box_data = _copy_bboxes(boxes, adj_box_data, max_boxes, check_dropped=False)
-    #     return img_data, box_data
 
     # resize image
     # new_ar = cnn_w / cnn_h * _rand(1 - jitter, 1 + jitter) / _rand(1 - jitter, 1 + jitter)
@@ -499,7 +496,7 @@ def get_augmented_data(annotation_line, input_shape, augment=True, max_boxes=20,
     np.random.shuffle(boxes)
     # NOTE: due to some randomisation some boxed can be out and filtered out
     adj_box_data = adjust_bboxes(boxes, input_shape, flip_horizontal, flip_vertical,
-                                 scaling, scaling, dx, dy)
+                                 scaling, scaling, dx, dy, bbox_overlap)
     box_data = _copy_bboxes(boxes, adj_box_data, max_boxes)
     # yolo3.visual.show_augment_data(image_open(line_split[0]), boxes, img_data, box_data, title=line_split[0])
     return img_data, box_data
@@ -650,7 +647,8 @@ def data_generator(annotation_lines, input_shape, anchors, nb_classes,
                    batch_size=1, augment=True, max_boxes=20,
                    jitter=0.3, img_scaling=1.2, resize_img=True, allow_rnd_shift=True,
                    color_hue=0.1, color_sat=1.5, color_val=1.5,
-                   flip_horizontal=True, flip_vertical=False, nb_threads=1):
+                   flip_horizontal=True, flip_vertical=False,
+                   bbox_overlap=0.95, nb_threads=1):
     """data generator for fit_generator
 
     :param list(str) annotation_lines:
@@ -669,6 +667,7 @@ def data_generator(annotation_lines, input_shape, anchors, nb_classes,
     :param bool flip_vertical: allow random flop image/boxes horizontal
     :param bool resize_img: resize image to fit fully to CNN
     :param bool allow_rnd_shift: allow shifting image not only centered crop
+    :param float bbox_overlap: threshold in case cut image, drop all boxes with lower overlap
     :param float|int nb_threads: nb threads running in parallel
     :return:
 
@@ -714,6 +713,7 @@ def data_generator(annotation_lines, input_shape, anchors, nb_classes,
         val=color_val,
         flip_horizontal=flip_horizontal,
         flip_vertical=flip_vertical,
+        bbox_overlap=bbox_overlap,
     )
 
     while True:

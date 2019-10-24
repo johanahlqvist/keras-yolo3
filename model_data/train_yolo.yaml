@@ -16,16 +16,7 @@ CB_stopping:
   patience: 25
 valid-split: 0.1
 generator:
-  max_boxes: 20
-  jitter: 0.3
-  color_hue: 0.1
-  color_sat: 1.5
-  color_val: 1.5
-  flip_horizontal: true
-  flip_vertical: false
+  augment: false
   resize_img: true
-  # scaling in +/- this range
-  img_scaling: 1.2
-  allow_rnd_shift: true
   nb_threads: 0.9
 recompute-bottlenecks: false

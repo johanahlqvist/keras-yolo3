@@ -17,7 +17,7 @@ For package installation use of the following commands
 pip install git+https://github.com/Borda/keras-yolo3.git
 pip install https://github.com/Borda/keras-yolo3/archive/master.zip
 ```
-or clone/download repositoy locally and run `python setup.py install`
+or clone/download repository locally and run `python setup.py install`
 
 ---
 
