@@ -399,7 +399,7 @@ def _copy_bboxes(boxes, adj_box_data, max_boxes, check_dropped=True):
                       len(boxes) - len(adj_box_data), len(boxes),
                       int(float(len(boxes) - len(adj_box_data)) / len(boxes) * 100))
     nb_boxes = min(max_boxes, len(adj_box_data))
-    box_data[:nb_boxes] = adj_box_data
+    box_data[:nb_boxes] = adj_box_data[:nb_boxes]
     return box_data
 
 

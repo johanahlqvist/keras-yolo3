@@ -117,8 +117,8 @@ class YOLO(object):
         try:
             self.yolo_model = load_model(self.weights_path, compile=False)
         except Exception:
+            logging.warning('Loading weights from "%s"', self.weights_path)
             is_tiny_version = (num_anchors == 6)  # default setting
-            logging.exception('Loading weights from "%s"', self.weights_path)
             cnn_h, cnn_w = model_image_size
             input = Input(shape=(cnn_h, cnn_w, 3))
             if is_tiny_version:
