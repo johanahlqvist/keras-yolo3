@@ -100,11 +100,13 @@ jobs:
       - run:
           name: Sample ReTraining
           command: |
+            # generate anchors for tiny-Yolo
+            python ./scripts/clustering.py --path_dataset ./model_data/VOC_2007_val.txt --path_output ./model_data --nb_clusters 6
             # prepare very tlim training on 2 and 1 epoch
             printf "image-size: [416, 416]\nbatch-size:\n  head: 3\n  full: 3\nepochs:\n  head: 2\n  full: 1\nvalid-split: 0.2\ngenerator:\n  augment: false\n  nb_threads: 1" > ./model_data/train_tiny-yolo_test.yaml
             # start the training
             cat ./model_data/train_tiny-yolo_test.yaml
-            python ./scripts/training.py --path_dataset ./model_data/VOC_2007_val.txt --path_weights ./model_data/tiny-yolo.h5 --path_anchors ./model_data/tiny-yolo_anchors.csv --path_classes ./model_data/voc_classes.txt --path_output ./model_data --path_config ./model_data/train_tiny-yolo_test.yaml
+            python ./scripts/training.py --path_dataset ./model_data/VOC_2007_val.txt --path_weights ./model_data/tiny-yolo.h5 --path_anchors ./model_data/VOC_2007_val_anchors.csv --path_classes ./model_data/voc_classes.txt --path_output ./model_data --path_config ./model_data/train_tiny-yolo_test.yaml
             # use the train model
             mv ./model_data/tiny-yolo_weights_full.h5 ./model_data/tiny-yolo.h5
 
@@ -124,11 +126,13 @@ jobs:
       - run:
           name: Sample Training from zero
           command: |
+            # generate anchors for tiny-Yolo
+            python ./scripts/clustering.py --path_dataset ./model_data/VOC_2007_val.txt --path_output ./model_data --nb_clusters 6
             # prepare very tlim training on 2 and 1 epoch
             printf "image-size: [416, 416]\nbatch-size:\n  head: 2\n  full: 2\nepochs:\n  head: 2\n  full: 1\nvalid-split: 0.2\ngenerator:\n  augment: false\n  nb_threads: 1" > ./model_data/train_tiny-yolo_test.yaml
             # start the training
             cat ./model_data/train_tiny-yolo_test.yaml
-            python ./scripts/training.py --path_dataset ./model_data/VOC_2007_val.txt --path_anchors ./model_data/tiny-yolo_anchors.csv --path_classes ./model_data/voc_classes.txt --path_output ./model_data --path_config ./model_data/train_tiny-yolo_test.yaml
+            python ./scripts/training.py --path_dataset ./model_data/VOC_2007_val.txt --path_anchors ./model_data/VOC_2007_val_anchors.csv --path_classes ./model_data/voc_classes.txt --path_output ./model_data --path_config ./model_data/train_tiny-yolo_test.yaml
             # use the train model
             mv ./model_data/tiny-yolo_weights_full.h5 ./model_data/tiny-yolo.h5
 
