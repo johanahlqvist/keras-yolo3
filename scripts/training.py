@@ -25,7 +25,8 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, Ear
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
 from keras_yolo3.model import create_model, create_model_tiny
-from keras_yolo3.utils import update_path, get_anchors, get_dataset_class_names, get_nb_classes, data_generator
+from keras_yolo3.utils import (
+    check_params_path, get_anchors, get_dataset_class_names, get_nb_classes, data_generator)
 from scripts.detection import arg_params_yolo
 
 DEFAULT_CONFIG = {
@@ -57,15 +58,11 @@ def parse_params():
     parser = arg_params_yolo()
     parser.add_argument('-d', '--path_dataset', type=str, required=True,
                         help='path to the train source - dataset,'
-                             ' with single taining instance per line')
+                             ' with single training instance per line')
     parser.add_argument('--path_config', type=str, required=False,
                         help='path to the train configuration, using YAML format')
     arg_params = vars(parser.parse_args())
-    for k in (k for k in arg_params if 'path' in k):
-        if not arg_params[k]:
-            continue
-        arg_params[k] = update_path(arg_params[k])
-        assert os.path.exists(arg_params[k]), 'missing (%s): %s' % (k, arg_params[k])
+    arg_params = check_params_path(arg_params)
     logging.debug('PARAMETERS: \n %s', repr(arg_params))
     return arg_params
 

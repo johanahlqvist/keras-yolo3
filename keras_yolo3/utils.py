@@ -7,11 +7,11 @@ import gc
 from functools import reduce, partial, wraps
 import multiprocessing as mproc
 
-from PIL import Image
 import numpy as np
 import pandas as pd
-from pathos.multiprocessing import ProcessPool
+from PIL import Image
 from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
+from pathos.multiprocessing import ProcessPool
 
 CPU_COUNT = mproc.cpu_count()
 
@@ -109,6 +109,7 @@ def io_image_decorate(func):
     :param func:
     :return:
     """
+
     @wraps(func)
     def wrap(*args, **kwargs):
         log_level = logging.getLogger().getEffectiveLevel()
@@ -118,6 +119,7 @@ def io_image_decorate(func):
             response = func(*args, **kwargs)
         logging.getLogger().setLevel(log_level)
         return response
+
     return wrap
 
 
@@ -773,3 +775,12 @@ def generator_bottleneck(annotation_lines, batch_size, input_shape, anchors, nb_
         box_data = np.array(box_data)
         y_true = preprocess_true_boxes(box_data, input_shape, anchors, nb_classes)
         yield [b0, b1, b2, *y_true], np.zeros(batch_size)
+
+
+def check_params_path(params):
+    for k in (k for k in params if 'path' in k):
+        if not params[k]:
+            continue
+        params[k] = update_path(params[k])
+        assert os.path.exists(params[k]), 'missing (%s): %s' % (k, params[k])
+    return params

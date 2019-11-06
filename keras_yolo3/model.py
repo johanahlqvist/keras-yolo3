@@ -6,6 +6,7 @@ import os
 import logging
 from functools import wraps
 
+import numpy as np
 import tensorflow as tf
 import keras.backend as K
 from keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D
@@ -16,7 +17,7 @@ from keras.models import Model
 from keras.regularizers import l2
 from keras.utils import multi_gpu_model
 
-from .utils import compose, update_path
+from keras_yolo3.utils import compose, update_path
 
 
 @wraps(Conv2D)
@@ -256,13 +257,138 @@ def yolo_eval(yolo_outputs, anchors, num_classes, image_shape, max_boxes=20,
     return boxes_, scores_, classes_
 
 
-def box_iou(b1, b2):
+def box_iou_xyxy(box1, box2):
+    """intersection over union
+
+    :param list box1:
+    :param list box2:
+    :return float:
+
+    >>> box_iou_xyxy([5, 10, 15, 20], [10, 15, 20, 25])  # docstest: +ELLIPSIS
+    0.14...
+    >>> box_iou_xyxy([5, 10, 15, 20], [30, 35, 40, 45])
+    0.0
+    >>> box_iou_xyxy([10, 15, 20, 25], [10, 15, 20, 25])
+    1.0
+    """
+    box1 = np.asanyarray(box1)
+    box2 = np.asanyarray(box2)
+    b1_wh = box1[2:4] - box1[0:2]
+    b2_wh = box2[2:4] - box2[0:2]
+    b_max_of_min = np.max([box1[0:2], box2[0:2]], axis=0)
+    b_min_of_max = np.min([box1[2:4], box2[2:4]], axis=0)
+
+    inter_wh = b_min_of_max - b_max_of_min
+    inter_wh[inter_wh < 0] = 0
+    inter_area = np.prod(inter_wh)
+
+    iou = inter_area / (np.prod(b1_wh) + np.prod(b2_wh) - inter_area)
+    return iou
+
+
+def compute_tp_fp_fn(boxes_true, boxes_pred, iou_thresh=0.5):
+    """compute basic metrics: TP, FP, TN
+
+    https://github.com/rafaelpadilla/Object-Detection-Metrics
+
+    Some basic concepts used by the metrics:
+
+    * True Positive (TP): A correct detection. Detection with IOU ≥ threshold
+    * False Positive (FP): A wrong detection. Detection with IOU < threshold
+    * False Negative (FN): A ground truth not detected
+    * True Negative (TN): Does not apply. It would represent a corrected misdetection.
+       In the object detection task there are many possible bounding boxes
+       that should not be detected within an image. Thus, TN would be all possible bounding
+       boxes that were corrrectly not detected (so many possible boxes within an image).
+       That's why it is not used by the metrics.
+
+    :param list boxes_true:
+    :param list boxes_pred:
+    :param float iou_thresh:
+    :return tuple(int,int,int):
+
+    >>> b_true = [[5, 10, 15, 20], [10, 15, 20, 25], [30, 35, 40, 45]]
+    >>> b_pred = [[5, 10, 15, 15], [10, 10, 20, 20], [10, 5, 20, 25], [10, 10, 20, 25]]
+    >>> compute_tp_fp_fn(b_true, b_pred)
+    (3, 1, 1)
+    """
+    if len(boxes_pred) == 0:
+        return 0, 0, len(boxes_true)
+    if len(boxes_true) == 0:
+        return 0, len(boxes_pred), 0
+
+    mx = np.zeros((len(boxes_true), len(boxes_pred)))
+    for i, bt in enumerate(boxes_true):
+        for j, bp in enumerate(boxes_pred):
+            mx[i, j] = box_iou_xyxy(bt, bp)
+
+    best_pred = np.max(mx, axis=0)
+    tp = sum(best_pred >= iou_thresh)
+    fp = sum(best_pred < iou_thresh)
+    best_true = np.max(mx, axis=1)
+    fn = sum(best_true < iou_thresh)
+    return tp, fp, fn
+
+
+def compute_det_metrics(boxes_true, boxes_pred, iou_thresh=0.5):
+    """compute metrics: precison, recall, ...
+
+    **Precision** is the ability of a model to identify only the relevant objects.
+     It is the percentage of correct positive predictions.
+    **Recall** is the ability of a model to find all the relevant cases
+     (all ground truth bounding boxes). It is the percentage of true positive detected
+     among all relevant ground truths.
+
+    See: https://github.com/rafaelpadilla/Object-Detection-Metrics
+
+    :param list boxes_true: [xmin, ymin, xmax, ymax, class]
+    :param list boxes_pred: [xmin, ymin, xmax, ymax, class]
+    :param float iou_thresh:
+    :return list(dict): list per class
+
+    >>> b_true = [[5, 10, 15, 20, 0], [10, 15, 20, 25, 0], [30, 35, 40, 45, 1]]
+    >>> b_pred = [[5, 10, 15, 15, 0], [10, 10, 20, 20, 0], [10, 5, 20, 25, 0], [10, 10, 20, 25, 1]]
+    >>> stat = compute_det_metrics(b_true, b_pred)
+    >>> import pandas as pd
+    >>> pd.DataFrame(stat)[list(sorted(stat[0]))]  # doctest: +NORMALIZE_WHITESPACE
+       #annots  #predict  FN  FP  class  precision  recall
+    0      2.0       3.0   0   1      0   0.666667     1.0
+    1      1.0       1.0   1   1      1   0.000000     0.0
+    """
+
+    boxes_true = np.asanyarray(boxes_true)
+    assert boxes_true.shape[1] == 5
+    boxes_pred = np.asanyarray(boxes_pred)
+    assert boxes_pred.shape[1] == 5
+    classes = np.unique(boxes_pred[:, 4].tolist() + boxes_true[:, 4].tolist())
+    stats = []
+
+    for cls in classes:
+        b_true = boxes_true[boxes_true[:, 4] == cls][:, :4]
+        b_pred = boxes_pred[boxes_pred[:, 4] == cls][:, :4]
+        tp, fp, fn = compute_tp_fp_fn(b_true, b_pred, iou_thresh)
+        nb_true = float(len(b_true))
+        nb_pred = float(len(b_pred))
+        stats.append({
+            'class': cls,
+            'precision': tp / nb_pred if nb_pred else 0.,
+            'recall': tp / nb_true if nb_true else 0.,
+            'FP': fp,
+            'FN': fn,
+            '#annots': nb_true,
+            '#predict': nb_pred,
+        })
+
+    return stats
+
+
+def box_iou_xywh(tensor1, tensor2):
     """Return iou tensor
 
     Parameters
     ----------
-    b1: tensor, shape=(i1,...,iN, 4), xywh
-    b2: tensor, shape=(j, 4), xywh
+    tensor1: tensor, shape=(i1,...,iN, 4), xywh
+    tensor2: tensor, shape=(j, 4), xywh
 
     Returns
     -------
@@ -272,24 +398,24 @@ def box_iou(b1, b2):
     -------
     >>> bbox1 = K.variable(value=[250, 200, 150, 100], dtype='float32')
     >>> bbox2 = K.variable(value=[300, 250, 100, 100], dtype='float32')
-    >>> iou = box_iou(bbox1, bbox2)
+    >>> iou = box_iou_xywh(bbox1, bbox2)
     >>> iou
     <tf.Tensor 'truediv_2:0' shape=(1,) dtype=float32>
     >>> K.eval(iou)
     array([0.1764706], dtype=float32)
     """
     # Expand dim to apply broadcasting.
-    b1 = K.expand_dims(b1, -2)
-    b1_xy = b1[..., :2]
-    b1_wh = b1[..., 2:4]
+    tensor1 = K.expand_dims(tensor1, -2)
+    b1_xy = tensor1[..., :2]
+    b1_wh = tensor1[..., 2:4]
     b1_wh_half = b1_wh / 2.
     b1_mins = b1_xy - b1_wh_half
     b1_maxes = b1_xy + b1_wh_half
 
     # Expand dim to apply broadcasting.
-    b2 = K.expand_dims(b2, 0)
-    b2_xy = b2[..., :2]
-    b2_wh = b2[..., 2:4]
+    tensor2 = K.expand_dims(tensor2, 0)
+    b2_xy = tensor2[..., :2]
+    b2_wh = tensor2[..., 2:4]
     b2_wh_half = b2_wh / 2.
     b2_mins = b2_xy - b2_wh_half
     b2_maxes = b2_xy + b2_wh_half
@@ -362,7 +488,7 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=0.5, print_loss=False):
         def _loop_body(b, ignore_mask):
             true_box = tf.boolean_mask(y_true[l][b, ..., 0:4],
                                        object_mask_bool[b, ..., 0])
-            iou = box_iou(pred_box[b], true_box)
+            iou = box_iou_xywh(pred_box[b], true_box)
             best_iou = K.max(iou, axis=-1)
             ignore_mask = ignore_mask.write(b, K.cast(best_iou < ignore_thresh,
                                                       K.dtype(true_box)))
