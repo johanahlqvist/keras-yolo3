@@ -29,11 +29,11 @@ import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
 from keras_yolo3.utils import check_params_path, nb_workers, image_open, update_path
-from keras_yolo3.model import compute_det_metrics
+from keras_yolo3.model import compute_detect_metrics
 from keras_yolo3.visual import draw_bounding_box
 
-CSV_NAME_RESULTS_IMAGES = 'detection-results_stat-images.csv'
-CSV_NAME_RESULTS_CLASSES = 'detection-results_stat-classes.csv'
+CSV_NAME_RESULTS_IMAGES = 'detection-results_conf=%.2f_iou=%.2f_stat-images.csv'
+CSV_NAME_RESULTS_CLASSES = 'detection-results_conf=%.2f_iou=%.2f_stat-classes.csv'
 ANNOT_COLUMNS = ('xmin', 'ymin', 'xmax', 'ymax', 'class')
 # DETECT_COLUMNS = ('xmin', 'ymin', 'xmax', 'ymax', 'class', 'confidence')
 TEMP_IMAGE_NAME = '%s_visual.jpg'
@@ -111,8 +111,8 @@ def eval_image(line, path_results, thr_confidence=0.5, thr_iou=0.5, path_out=Non
     if not (all_cols_in_annot and all_cols_in_pred):
         return None
 
-    stats = compute_det_metrics(df_annot[list(ANNOT_COLUMNS)], df_preds[list(ANNOT_COLUMNS)],
-                                iou_thresh=thr_iou)
+    stats = compute_detect_metrics(df_annot[list(ANNOT_COLUMNS)], df_preds[list(ANNOT_COLUMNS)],
+                                   iou_thresh=thr_iou)
 
     if path_out and os.path.isdir(path_out):
         draw_export_bboxes(img_path, path_out,
@@ -140,7 +140,7 @@ def _main(path_dataset, path_results, confidence, iou, visual=False, nb_jobs=0.9
     map_process = pool.imap if pool else map
 
     results_image, results_class = [], []
-    for stat in tqdm.tqdm(map_process(_wrap_eval, dataset)):
+    for stat in tqdm.tqdm(map_process(_wrap_eval, dataset), desc='Evaluation'):
         if not stat:
             continue
         results_image.append(dict(pd.DataFrame(stat).mean()))
@@ -148,7 +148,7 @@ def _main(path_dataset, path_results, confidence, iou, visual=False, nb_jobs=0.9
 
     df_results_image = pd.DataFrame(results_image)
     logging.info(df_results_image.describe())
-    path_csv = os.path.join(path_results, CSV_NAME_RESULTS_IMAGES)
+    path_csv = os.path.join(path_results, CSV_NAME_RESULTS_IMAGES % (confidence, iou))
     logging.debug('exporting csv: %s', path_csv)
     df_results_image.to_csv(path_csv)
 
@@ -156,13 +156,14 @@ def _main(path_dataset, path_results, confidence, iou, visual=False, nb_jobs=0.9
     for gr, df_gr in pd.DataFrame(results_class).groupby('class'):
         df_results_class = df_results_class.append(df_gr.mean(), ignore_index=True)
     logging.info(df_results_class)
-    path_csv = os.path.join(path_results, CSV_NAME_RESULTS_CLASSES)
+    path_csv = os.path.join(path_results, CSV_NAME_RESULTS_CLASSES % (confidence, iou))
     logging.debug('exporting csv: %s', path_csv)
     df_results_class.to_csv(path_csv)
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
+    pd.set_option("display.max_columns", 25)
     arg_params = parse_params()
     _main(**arg_params)
     logging.info('Done')

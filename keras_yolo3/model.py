@@ -330,8 +330,8 @@ def compute_tp_fp_fn(boxes_true, boxes_pred, iou_thresh=0.5):
     return tp, fp, fn
 
 
-def compute_det_metrics(boxes_true, boxes_pred, iou_thresh=0.5):
-    """compute metrics: precison, recall, ...
+def compute_detect_metrics(boxes_true, boxes_pred, iou_thresh=0.5):
+    """compute metrics: precision, recall, ...
 
     **Precision** is the ability of a model to identify only the relevant objects.
      It is the percentage of correct positive predictions.
@@ -348,7 +348,7 @@ def compute_det_metrics(boxes_true, boxes_pred, iou_thresh=0.5):
 
     >>> b_true = [[5, 10, 15, 20, 0], [10, 15, 20, 25, 0], [30, 35, 40, 45, 1]]
     >>> b_pred = [[5, 10, 15, 15, 0], [10, 10, 20, 20, 0], [10, 5, 20, 25, 0], [10, 10, 20, 25, 1]]
-    >>> stat = compute_det_metrics(b_true, b_pred)
+    >>> stat = compute_detect_metrics(b_true, b_pred)
     >>> import pandas as pd
     >>> pd.DataFrame(stat)[list(sorted(stat[0]))]  # doctest: +NORMALIZE_WHITESPACE
        #annots  #predict  FN  FP  class  precision  recall

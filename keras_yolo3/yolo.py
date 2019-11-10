@@ -194,7 +194,7 @@ class YOLO(object):
         end = time.time()
         logging.debug('Found %i boxes in %f sec.', len(out_boxes), (end - start))
 
-        thickness = (image.size[0] + image.size[1]) // 300
+        thickness = (image.size[0] + image.size[1]) // 500
 
         predicts = []
         for i, c in reversed(list(enumerate(out_classes))):
