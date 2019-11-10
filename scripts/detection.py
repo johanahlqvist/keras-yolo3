@@ -47,9 +47,7 @@ def arg_params_yolo():
     # class YOLO defines the default value, so suppress any default HERE
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     # Command line options
-    parser.add_argument('-w', '--path_weights', type=str,
-                        help='path to model weight file')
-    parser.add_argument('-a', '--path_anchors', type=str,
+    parser.add_argument('-a', '--path_anchors', type=str, required=True,
                         help='path to anchor definitions')
     parser.add_argument('-c', '--path_classes', type=str,
                         help='path to class definitions')
@@ -63,6 +61,8 @@ def arg_params_yolo():
 def parse_params():
     # class YOLO defines the default value, so suppress any default HERE
     parser = arg_params_yolo()
+    parser.add_argument('-w', '--path_weights', type=str, required=True,
+                        help='path to model weight file')
     parser.add_argument('-i', '--path_image', nargs='*', type=str, required=False,
                         help='Images to be processed (sequence of paths)')
     parser.add_argument('-v', '--path_video', nargs='*', type=str, required=False,

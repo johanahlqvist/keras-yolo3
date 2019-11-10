@@ -4,9 +4,10 @@ We expect that the predictions are in single folder and image names in dataset a
 
     python evaluate.py \
         --path_dataset ../model_data/VOC_2007_train.txt \
-        --path_results ./results \
+        --path_results ../results \
         --confidence 0.5 \
-        --iou 0.5
+        --iou 0.5 \
+        --visual
 
 It generates
 * statistic per image (mean over all classes)
@@ -27,13 +28,15 @@ import tqdm
 import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]
-from keras_yolo3.utils import check_params_path, nb_workers
+from keras_yolo3.utils import check_params_path, nb_workers, image_open, update_path
 from keras_yolo3.model import compute_det_metrics
+from keras_yolo3.visual import draw_bounding_box
 
 CSV_NAME_RESULTS_IMAGES = 'detection-results_stat-images.csv'
 CSV_NAME_RESULTS_CLASSES = 'detection-results_stat-classes.csv'
 ANNOT_COLUMNS = ('xmin', 'ymin', 'xmax', 'ymax', 'class')
 # DETECT_COLUMNS = ('xmin', 'ymin', 'xmax', 'ymax', 'class', 'confidence')
+TEMP_IMAGE_NAME = '%s_visual.jpg'
 
 
 def parse_params():
@@ -47,13 +50,34 @@ def parse_params():
                         help='detection confidence score')
     parser.add_argument('--iou', type=float, required=False, default=0.5,
                         help='intersection over union')
+    parser.add_argument('--nb_jobs', type=float, help='number of parallel processes',
+                        default=0.9, required=False)
+    parser.add_argument('--visual', default=False, action='store_true',
+                        help='visualize annot & predict')
     arg_params = vars(parser.parse_args())
     arg_params = check_params_path(arg_params)
     logging.debug('PARAMETERS: \n %s', repr(arg_params))
     return arg_params
 
 
-def eval_image(line, path_results, thr_confidence=0.5, thr_iou=0.5):
+def draw_export_bboxes(img_path, path_out, bboxes_anot, bboxes_pred):
+    img_name, _ = os.path.splitext(os.path.basename(img_path))
+    image = image_open(img_path)
+
+    for bb in bboxes_anot:
+        image = draw_bounding_box(image, bb[4], bb[:4], swap_xy=True,
+                                  color=(0, 255, 0), thickness=2)
+    for bb in bboxes_pred:
+        image = draw_bounding_box(image, bb[4], bb[:4], swap_xy=True,
+                                  color=(255, 0, 0), thickness=2)
+
+    name_visu = TEMP_IMAGE_NAME % img_name
+    path_visu = os.path.join(update_path(path_out), name_visu)
+    image.save(path_visu)
+    return path_visu
+
+
+def eval_image(line, path_results, thr_confidence=0.5, thr_iou=0.5, path_out=None):
     line_elems = line.strip().split()
     img_path = line_elems[0]
     img_name, _ = os.path.splitext(os.path.basename(img_path))
@@ -89,20 +113,29 @@ def eval_image(line, path_results, thr_confidence=0.5, thr_iou=0.5):
 
     stats = compute_det_metrics(df_annot[list(ANNOT_COLUMNS)], df_preds[list(ANNOT_COLUMNS)],
                                 iou_thresh=thr_iou)
+
+    if path_out and os.path.isdir(path_out):
+        draw_export_bboxes(img_path, path_out,
+                           df_annot[list(ANNOT_COLUMNS)].values,
+                           df_preds[list(ANNOT_COLUMNS)].values)
+
     # stats['name'] = img_name
     return stats
 
 
-def _main(path_dataset, path_results, confidence, iou, nb_jobs=0.9):
+def _main(path_dataset, path_results, confidence, iou, visual=False, nb_jobs=0.9):
     with open(path_dataset, 'r') as fp:
         dataset = fp.readlines()
 
     if not dataset:
         logging.warning('Dataset is empty - %s', path_dataset)
+        return
 
     nb_jobs = nb_workers(nb_jobs)
     pool = ProcessPool(nb_jobs) if nb_jobs > 1 else None
-    _wrap_eval = partial(eval_image, path_results=path_results)
+    _wrap_eval = partial(eval_image, path_results=path_results,
+                         thr_confidence=confidence, thr_iou=iou,
+                         path_out=path_results if visual else None)
     # multiprocessing loading of batch data
     map_process = pool.imap if pool else map
 
@@ -129,7 +162,7 @@ def _main(path_dataset, path_results, confidence, iou, nb_jobs=0.9):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     arg_params = parse_params()
     _main(**arg_params)
     logging.info('Done')

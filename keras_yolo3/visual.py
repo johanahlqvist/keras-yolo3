@@ -10,16 +10,16 @@ from PIL import ImageDraw
 import matplotlib.pylab as plt
 
 
-def draw_bounding_box(image, predicted_class, box, score, color, thickness):
+def draw_bounding_box(image, predicted_class, box, score=None, color=(255, 0, 0), thickness=1, swap_xy=False):
     """draw bounding box
 
-    :param image:
-    :param predicted_class:
-    :param box:
-    :param score:
-    :param color:
-    :param thickness:
-    :return:
+    :param ndarray image:
+    :param int|str predicted_class:
+    :param list box:
+    :param float score:
+    :param tuple(int,int,int) color:
+    :param int thickness:
+    :return ndarray:
 
     >>> import os
     >>> from keras_yolo3.utils import update_path, image_open
@@ -28,7 +28,7 @@ def draw_bounding_box(image, predicted_class, box, score, color, thickness):
     >>> draw  # doctest: +ELLIPSIS
     <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=520x518 at ...>
     """
-    label_score = '{} ({:.2f})'.format(predicted_class, score)
+    label_score = '{} ({:.2f})'.format(predicted_class, score) if score else ''
 
     draw = ImageDraw.Draw(image)
     log_level = logging.getLogger().getEffectiveLevel()
@@ -36,12 +36,15 @@ def draw_bounding_box(image, predicted_class, box, score, color, thickness):
     label_size = draw.textsize(label_score)
     logging.getLogger().setLevel(log_level)
 
+    if swap_xy:
+        box = np.asarray(box)[[1, 0, 3, 2]]
+
     top, left, bottom, right = box
     top = max(0, np.floor(top + 0.5).astype('int32'))
     left = max(0, np.floor(left + 0.5).astype('int32'))
     bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
     right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-    logging.debug(' > %s: (%i, %i), (%i, %i)', label_score, left, top, right, bottom)
+    logging.debug(' >> drawing bbox > %s: (%i, %i), (%i, %i)', label_score, left, top, right, bottom)
 
     if top - label_size[1] >= 0:
         text_origin = np.array([left, top - label_size[1]])

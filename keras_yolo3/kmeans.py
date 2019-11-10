@@ -11,6 +11,22 @@ import tqdm
 
 
 class YOLO_Kmeans:
+    """Clustering of boxes width and height
+
+    Simplified version without file I/O
+
+    >>> np.random.seed(0)
+    >>> boxes = np.random.randint(50, 250, (100, 2))
+    >>> clust = YOLO_Kmeans(cluster_number=3, filename=None)
+    >>> result = clust.fit(boxes, k=clust.cluster_number)
+    >>> result = result[np.lexsort(result.T[0, None])]
+    >>> result
+    array([[ 99, 192],
+           [147,  81],
+           [198, 179]])
+    >>> clust.avg_iou(boxes, result)  # doctest: +ELLIPSIS
+    0.688...
+    """
 
     def __init__(self, cluster_number, filename):
         self.cluster_number = cluster_number

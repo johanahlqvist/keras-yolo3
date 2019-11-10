@@ -18,7 +18,8 @@ from .model import yolo_eval, yolo_body_full, yolo_body_tiny
 from .utils import letterbox_image, update_path, get_anchors, get_class_names
 from .visual import draw_bounding_box
 
-PREDICT_FIELDS = ('class', 'label', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax')
+# swap X-Y axis
+PREDICT_FIELDS = ('class', 'label', 'confidence', 'ymin', 'xmin', 'ymax', 'xmax')
 
 
 class YOLO(object):
